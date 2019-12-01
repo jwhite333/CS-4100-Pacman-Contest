@@ -1,2 +1,4 @@
 __pycache__/**
 score_Pacman_*
+frames/**
+.vscode

@@ -19,6 +19,9 @@ import random, time, util
 from game import Directions
 import game
 from util import nearestPoint
+import numpy as np
+import cv2 as cv
+import os
 
 #########
 # Agent #
@@ -27,6 +30,11 @@ class MyAgent(CaptureAgent):
   """
   YOUR DESCRIPTION HERE
   """
+  def __init__(self, index, timeForComputing = .1):
+    super(MyAgent, self).__init__(index, timeForComputing)
+    self.previousState = None
+    self.previousScore = 0
+    self.previousAction = None
 
   def registerInitialState(self, gameState):
     """
@@ -53,6 +61,52 @@ class MyAgent(CaptureAgent):
     """
     Picks among actions randomly.
     """
+    print(self.previousState)
+    height = gameState.getWalls().height
+    width = gameState.getWalls().width
+    image = np.zeros((width, height, 3), dtype=np.uint8)
+    
+    # Add walls
+    gray = (145, 145, 145)
+    for (x, y) in gameState.getWalls().asList():
+      image[x, y] = gray
+
+    yellow = (0, 200, 255)
+    for (x, y) in gameState.getFood().asList():
+      image[x, y] = yellow
+
+    green = (0, 255, 0)
+    for index in gameState.getPacmanTeamIndices():
+      position = gameState.getAgentPosition(index)
+      if position is not None:
+        (x, y) = position
+        image[x, y] = green
+
+    red = (0, 0, 255)
+    for index in gameState.getGhostTeamIndices():
+      position = gameState.getAgentPosition(index)
+      if position is not None:
+        (x, y) = position
+        image[x, y] = red
+
+    # Save state
+    trainingDir = "training"
+    if not os.path.exists(trainingDir):
+      os.mkdir(trainingDir)
+    
+    if self.previousState is not None:
+      decisionLog = open(os.path.join(trainingDir, "decisionLog.txt"), 'a')
+
+      timeString = str(time.time())
+      scoreDiff = gameState.getScore() - self.previousScore
+      scoreDiff -= 1
+      decisionLog.write(timeString + "," + str(self.previousAction) + "," + str(scoreDiff) + "\n")
+      cv.imwrite(os.path.join(trainingDir, "frame-" + timeString + ".png"), image)
+      decisionLog.close()
+
+    # cv.imshow("demo", image)
+    # cv.waitKey(0)
+
     teammateActions = self.receivedBroadcast
     # Process your teammate's broadcast! 
     # Use it to pick a better action for yourself
@@ -61,8 +115,12 @@ class MyAgent(CaptureAgent):
 
     filteredActions = actionsWithoutReverse(actionsWithoutStop(actions), gameState, self.index)
 
-    currentAction = random.choice(actions) # Change this!
-    return currentAction
+
+    chosenAction = random.choice(actions) # Change this!
+    self.previousAction = chosenAction
+    self.previousState = image
+    self.previousScore = gameState.getScore()
+    return chosenAction
 
 def actionsWithoutStop(legalActions):
   """
