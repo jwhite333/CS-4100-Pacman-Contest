@@ -147,7 +147,7 @@ class CaptureAgent(Agent):
   # Action Choice #
   #################
 
-  def getAction(self, gameState):
+  def getAction(self, gameState, policy_net = None, state = None):
     """
     Calls chooseAction on a grid position, but continues on half positions.
     If you subclass CaptureAgent, you shouldn't need to override this method.  It
@@ -165,9 +165,12 @@ class CaptureAgent(Agent):
       # We're halfway from one position to the next
       return gameState.getLegalActions(self.index)[0]
     else:
-      return self.chooseAction(gameState)
+      if self.index == 1:
+        return self.chooseAction(gameState, policy_net, state)
+      else:
+        return self.chooseAction(gameState)
 
-  def chooseAction(self, gameState):
+  def chooseAction(self, gameState, policy_net = None, state = None):
     """
     Override this method to make a good agent. It should return a legal action within
     the time limit (otherwise a random legal action will be chosen for you).

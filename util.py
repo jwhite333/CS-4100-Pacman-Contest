@@ -493,3 +493,44 @@ class TimeoutFunction:
             signal.signal(signal.SIGALRM, old)
         signal.alarm(0)
         return result
+
+
+import torch
+def tensor_to_action(tensor):
+  value = tensor.item()
+  if 0 < value <=1:
+    return "North"
+  elif 1 < value <=2:
+    return "South"
+  elif 2 < value <=3:
+    return "East"
+  elif 3 < value <=4:
+    return "West"
+  else:
+    return "Stop"
+
+def tensor_index_to_action(index):
+  if 0 < index <=1:
+    return "North"
+  elif 1 < index <=2:
+    return "South"
+  elif 2 < index <=3:
+    return "East"
+  elif 3 < index <=4:
+    return "West"
+  else:
+    return "Stop"
+
+def action_to_tensor(action):
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  if action == "North":
+    return torch.tensor([[0]], device=device)
+  elif action == "South":
+    return torch.tensor([[1]], device=device)
+  elif action == "East":
+    return torch.tensor([[2]], device=device)
+  elif action == "West":
+    return torch.tensor([[3]], device=device)
+  else:
+    return torch.tensor([[4]], device=device)
+    torch.tensor()
