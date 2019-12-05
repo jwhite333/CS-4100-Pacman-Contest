@@ -83,7 +83,6 @@ def ExpectedMin(gameState, action, depth, depthLimit, agentIndex, recursionLevel
 
   # Calculate min action recursively
   else:
-    # totalScore = 0
     legalActions = gameState.getLegalActions(agentIndex)
 
     scores = []
@@ -94,18 +93,17 @@ def ExpectedMin(gameState, action, depth, depthLimit, agentIndex, recursionLevel
       else:
         scores.append(ExpectedMin(nextState, nextAction, depth, depthLimit, nextAgent, recursionLevel + 1, doLogging, evalFunction, broadcast))
 
+    # Expect the ghost to try to ruin our day 75% of the time
     minScore = min(scores)
     lowScores = [score for score in scores if score == minScore]
     lowScoreChance = 0.75 / len(lowScores)
     highScoreChance = 0.25 / (len(scores) - len(lowScores))
-
     score = 0
     for value in scores:
       if value == minScore:
         score += value * lowScoreChance
       else:
         score += value * highScoreChance
-    # score = totalScore / len(legalActions)
 
     # Log ending info
     if doLogging:
@@ -115,7 +113,6 @@ def ExpectedMin(gameState, action, depth, depthLimit, agentIndex, recursionLevel
 def Expectimax(gameState, agentIndex, depth, depthLimit, doLogging, evalFunction, broadcast):
   maxValue = -inf
   bestAction = None
-  # actionsWithoutReverse(actionsWithoutStop(gameState.getLegalActions(agentIndex)), gameState, agentIndex):
   for action in actionsWithoutStop(gameState.getLegalActions(agentIndex)):
     nextState = gameState.generateSuccessor(agentIndex, action)
     result = ExpectedMin(nextState, action, depth, depthLimit, 2, 0, doLogging, evalFunction, broadcast)
@@ -161,13 +158,6 @@ class MyAgent(CaptureAgent):
     self.initialFoodCount = gameState.getFood().count()
 
     self.distancer = Distancer(gameState.data.layout)
-
-    # file = open("weights.dat", "r")
-    # self.featureWeights = []
-    # for line in file:
-    #   self.featureWeights.append(int(line))
-    # file.close()
-
     self.featureWeights = [
       -5,                     # 1. Distance to food not being targeted by teammate
       -1200,                  # 2. Number of ghosts 0 blocks away
@@ -193,7 +183,6 @@ class MyAgent(CaptureAgent):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    # start = time.time()
     # Features
     # 1. Distance to food not being targeted by teammate
     # 2. Number of ghosts 3 blocks away
@@ -225,7 +214,7 @@ class MyAgent(CaptureAgent):
           minTeammateFoodDistance = distance
           teammateFoodTarget = pellet
 
-    # Get min distance to other food pellet
+    # Get min distance to other food pellet, treating ghosts as walls
     if len(food):
       minFoodDistance = inf
       for pellet in food:
@@ -259,7 +248,6 @@ class MyAgent(CaptureAgent):
     utility = 0
     for index, feature in enumerate(features):
       utility += feature * self.featureWeights[index]
-
     return utility
 
 def actionsWithoutStop(legalActions):
