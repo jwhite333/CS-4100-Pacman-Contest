@@ -533,4 +533,3 @@ def action_to_tensor(action):
     return torch.tensor([[3]], device=device)
   else:
     return torch.tensor([[4]], device=device)
-    torch.tensor()

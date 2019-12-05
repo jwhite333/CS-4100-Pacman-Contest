@@ -36,96 +36,7 @@ EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 200
 
-# resize = T.Compose([T.ToPILImage(),
-#                     T.Resize(40, interpolation=Image.CUBIC),
-#                     T.ToTensor()])
 
-###########
-# PyTorch #
-###########
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Transition = namedtuple('Transition',
-#                         ('state', 'action', 'next_state', 'reward'))
-
-# class ReplayMemory(object):
-
-#     def __init__(self):
-#         self.trainingDir = "training"
-#         if not os.path.exists(self.trainingDir):
-#           os.mkdir(self.trainingDir)
-#         self.file = os.path.join(self.trainingDir, "memory.dat")
-
-#     def push(self, state, action, next_state, reward):
-#         """Saves a transition."""
-
-#         # Save image
-#         timeString = str(time.time())
-#         cv.imwrite(os.path.join(self.trainingDir, "state-" + timeString + ".png"), state)
-#         cv.imwrite(os.path.join(self.trainingDir, "next_state-" + timeString + ".png"), next_state)
-
-#         # Save the rest
-#         file = open(self.file, 'a')
-#         file.write("state-" + timeString + ".png," +
-#                    str(action) + "," +
-#                    "next_state-" + timeString + ".png," +
-#                    str(reward + "\n"))
-
-
-#         file.close()
-
-#     def sample(self, batch_size):
-#         file = open(self.file, 'r')
-#         lines = random.sample(file, batch_size)
-#         transitions = []
-#         for line in lines:
-#           line = line.split(",")
-#           state = cv.imread(os.path.join(self.trainingDir, "state-" + line[0] + ".png"))
-#           next_state = cv.imread(os.path.join(self.trainingDir, "next_state-" + line[2] + ".png"))
-#           transitions.append(Transition(state, line[1], next_state, float(line[3])))
-#         file.close()
-#         return transitions
-
-#     def __len__(self):
-#         length = 0
-#         file = open(self.file, 'r')
-#         length = len(file)
-#         file.close()
-#         return length
-
-# class DQN(nn.Module):
-
-#     def __init__(self, h, w, outputs):
-#         super(DQN, self).__init__()
-#         self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
-#         self.bn1 = nn.BatchNorm2d(16)
-#         self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-#         self.bn2 = nn.BatchNorm2d(32)
-#         self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-#         self.bn3 = nn.BatchNorm2d(32)
-
-#         # Number of Linear input connections depends on output of conv2d layers
-#         # and therefore the input image size, so compute it.
-#         def conv2d_size_out(size, kernel_size = 5, stride = 1):
-#             return (size - (kernel_size - 1) - 1) // stride  + 1
-#         convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(w)))
-#         convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(h)))
-#         linear_input_size = convw * convh * 32
-#         self.head = nn.Linear(linear_input_size, outputs)
-#     # Called with either one element to determine next action, or a batch
-#     # during optimization. Returns tensor([[left0exp,right0exp]...]).
-#     def forward(self, x):
-#         x = F.relu(self.bn1(self.conv1(x)))
-#         x = F.relu(self.bn2(self.conv2(x)))
-#         x = F.relu(self.bn3(self.conv3(x)))
-#         return self.head(x.view(x.size(0), -1))
-
-# BATCH_SIZE = 128
-# GAMMA = 0.999
-# EPS_START = 0.9
-# EPS_END = 0.05
-# EPS_DECAY = 200
-# TARGET_UPDATE = 10
 
 #########
 # Agent #
@@ -140,35 +51,6 @@ class MyAgent(CaptureAgent):
     # self.previousScore = 0
     self.previousActions = [None, None]
     self.initialFood = None
-
-    # self.actionSpaceSize = 5
-    # self.policy_net = None
-    # self.target_net = None
-    # self.optimizer = None
-    # self.memory = ReplayMemory()
-    # self.steps_done = 0
-    # self.imageHeight = 0
-    # self.imageWidth = 0
-    # self.doTargetNetUpdate = True if random.random() > 0.9 else False
-
-  # def tensorToAction(self, tensor):
-  #   value = tensor[0][0].item()
-  #   if 0 < value <=1:
-  #     return "North"
-  #   elif 1 < value <=2:
-  #     return "South"
-  #   elif 2 < value <=3:
-  #     return "East"
-  #   elif 3 < value <=4:
-  #     return "West"
-  #   else:
-      # return "Stop"
-
-  # def updateScreenAndAction(self, screen, action):
-  #   self.previousScreens[0] = self.previousScreens[1]
-  #   self.previousScreens[1] = screen
-  #   self.previousActions[0] = self.previousActions[1]
-  #   self.previousActions[1] = action
 
   def registerInitialState(self, gameState):
     """
@@ -193,42 +75,6 @@ class MyAgent(CaptureAgent):
 
     self.steps_done = 0
 
-    # # DQN Stuff
-    # self.imageHeight = gameState.getWalls().height
-    # self.imageWidth = gameState.getWalls().width
-    # self.policy_net = DQN(self.imageHeight, self.imageWidth, self.actionSpaceSize).to(device)
-    # self.target_net = DQN(self.imageHeight, self.imageWidth, self.actionSpaceSize).to(device)
-    # self.target_net.load_state_dict(self.policy_net.state_dict())
-    # self.target_net.eval()
-    # self.optimizer = optim.RMSprop(self.policy_net.parameters())
-
-  # def getScreen(self, gameState): # Maybe do grayscale?
-  #   image = np.zeros((self.imageWidth, self.imageHeight, 3), dtype=np.uint8)
-
-  #   gray = (145, 145, 145)
-  #   for (x, y) in gameState.getWalls().asList():
-  #     image[x, y] = gray
-
-  #   yellow = (0, 200, 255)
-  #   for (x, y) in gameState.getFood().asList():
-  #     image[x, y] = yellow
-
-  #   green = (0, 255, 0)
-  #   for index in gameState.getPacmanTeamIndices():
-  #     position = gameState.getAgentPosition(index)
-  #     if position is not None:
-  #       (x, y) = position
-  #       image[x, y] = green
-
-  #   red = (0, 0, 255)
-  #   for index in gameState.getGhostTeamIndices():
-  #     position = gameState.getAgentPosition(index)
-  #     if position is not None:
-  #       (x, y) = position
-  #       image[x, y] = red
-
-  #   return image
-
   def chooseAction(self, gameState, policy_net, state):
     """
     Picks among actions randomly.
@@ -239,12 +85,26 @@ class MyAgent(CaptureAgent):
     self.steps_done += 1
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     legalActions = gameState.getLegalActions(self.index)
+    teammateActions = self.receivedBroadcast
     # print("    Legal actions:")
     # for action in legalActions:
     #   print("      ", action)
     filteredActions = actionsWithoutReverse(actionsWithoutStop(legalActions), gameState, self.index)
     if sample > eps_threshold:
+        start = time.time()
         with torch.no_grad():
+
+            # # Expectimax search
+            # numAgents = gameState.numAgents
+            # depthLimit = 2
+            # depth = 0
+            # currentAgent = 0
+            # while depth < depthLimit * numAgents:
+            #   if currentAgent == 0:
+            #     agentActions = teammateActions[depth]
+            #   else:
+            #     agentActions = gameState.getLegalActions(currentAgent)
+
             # t.max(1) will return largest column value of each row.
             # second column on max result is index of where max element was
             # found, so we pick action with the larger expected reward.
@@ -263,14 +123,15 @@ class MyAgent(CaptureAgent):
                 continue
               else:
                 break
-            print("        PolicyNet returned action ", action)
+            # print("        PolicyNet returned action ", action)
+            # print("Inference took {0} seconds".format(time.time() - start))
             return action
     else:
         action = None
         while action not in filteredActions:
             tensor = torch.tensor([[random.randrange(5)]], device=device, dtype=torch.long)
             action = util.tensor_to_action(tensor[0][0])
-        print("        Random returned action ", action)
+        # print("        Random returned action ", action)
         return action
     # if self.initialFood is None:
     #   self.initialFoodCount = gameState.getFood().count()

@@ -49,7 +49,6 @@ from game import reconstituteGrid
 import sys, util, types, time, random, imp
 import keyboardAgents
 from myAgent import MyAgent
-
 import gym
 import math
 import random
@@ -60,6 +59,7 @@ from collections import namedtuple
 from itertools import count
 from PIL import Image
 
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -74,7 +74,9 @@ GAMMA = 0.999
 EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 200
+DECAY = 0.9999
 TARGET_UPDATE = 10
+TRAINING_MODE = False
 
 # Get number of actions from action space
 n_actions = 5
@@ -110,6 +112,11 @@ class DQN(nn.Module):
     return self.head(x.view(x.size(0), -1))
 
 policy_net = DQN(screen_height, screen_width, n_actions).to(device)
+
+# Import network
+if os.path.isfile("policy_net"):
+  policy_net.load_state_dict(torch.load("policy_net"))
+
 target_net = DQN(screen_height, screen_width, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
@@ -117,7 +124,7 @@ target_net.eval()
 optimizer = optim.RMSprop(policy_net.parameters())
 memory = ReplayMemory(10000)
 
-steps_done = 0
+moves_taken = 0
 episode_durations = []
 
 # If you change these, you won't affect the server, so you can't cheat
@@ -859,7 +866,7 @@ def optimize_model():
   # Compute a mask of non-final states and concatenate the batch elements
   # (a final state would've been the one after which simulation ended)
   non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                        batch.next_state)), device=device, dtype=torch.uint8)
+                                        batch.next_state)), device=device, dtype=torch.bool) # uint8
   non_final_next_states = torch.cat([s for s in batch.next_state
                                               if s is not None])
   state_batch = torch.cat(batch.state)
@@ -883,6 +890,8 @@ def optimize_model():
 
   # Compute Huber loss
   loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
+  # print("Loss: ", loss.item())
+
 
   # Optimize the model
   optimizer.zero_grad()
@@ -891,19 +900,20 @@ def optimize_model():
       param.grad.data.clamp_(-1, 1)
   optimizer.step()
 
-def get_reward(gameState, initialFoodCount):
-  totalfoodDistance = 0
-  for index in gameState.getPacmanTeamIndices():
-    foodDistance = 0
-    if gameState.getFood().count() > 0:
-      foodDistance = math.inf
-      for foodPosition in gameState.getFood():
-        distance = util.manhattanDistance(gameState.getAgentPosition(index), foodPosition)
-        if distance < foodDistance:
-          foodDistance = distance
-    totalfoodDistance += foodDistance
-  reward = ((screen_height * screen_width) * - gameState.getFood().count()) - totalfoodDistance
-  return torch.tensor([[reward]], device=device)
+def get_reward(gameState, initialFoodCount, foodEatenThisTurn, turnsTaken):
+  # totalfoodDistance = 0
+  # for index in gameState.getPacmanTeamIndices():
+  #   foodDistance = 0
+  #   if gameState.getFood().count() > 0:
+  #     foodDistance = math.inf
+  #     for foodPosition in gameState.getFood():
+  #       distance = util.manhattanDistance(gameState.getAgentPosition(index), foodPosition)
+  #       if distance < foodDistance:
+  #         foodDistance = distance
+  #   totalfoodDistance += foodDistance
+  # reward = ((screen_height * screen_width) * - gameState.getFood().count()) - totalfoodDistance
+  return torch.tensor([[foodEatenThisTurn * (turnsTaken ** DECAY)]], device=device)
+  # return torch.tensor([[reward]], device=device)
 
 def get_screen(gameState): # Maybe do grayscale?
   image = np.zeros((screen_width, screen_height, 3), dtype=np.uint8)
@@ -942,7 +952,8 @@ def runGames( layout, agents, display, length, numGames, record, numTraining, pa
 
   if numTraining > 0:
     print('Playing %d training games' % numTraining)
-
+  import time
+  gamesStartTime = time.time()
   for i in range( numGames ):
     beQuiet = i < numTraining
     if beQuiet:
@@ -958,21 +969,23 @@ def runGames( layout, agents, display, length, numGames, record, numTraining, pa
     gameOver = False
 
     # Main loop
-    myAgentIndex = 0
+    # myAgentIndex = 0
     for index, agent in enumerate(g.agents):
       if isinstance(agent, MyAgent):
         myAgentIndex = index
         break
     initialFoodCount = g.state.getFood().count()
     moveHistoryIter = 0
-    iterations = 0
+    # iterations = 0
     last_screen = get_screen(g.state)
     current_screen = get_screen(g.state)
     state = current_screen - last_screen
     while g.agentIndex != 1:
         gameOver = g.runOneRound(policy_net, state)
+    moves_taken = 0
     for t in count():
 
+      foodBeforeTurn = g.state.getFood().count()
       gameOver = g.runOneRound(policy_net, state)
       while g.agentIndex != 1:
         gameOver = g.runOneRound(policy_net, state)
@@ -984,9 +997,6 @@ def runGames( layout, agents, display, length, numGames, record, numTraining, pa
           pacmanAction = util.action_to_tensor(action)
           moveHistoryIter += index
           break
-      
-      # Calculate reward
-      reward = get_reward(g.state, initialFoodCount)
 
       # Observe changes
       last_screen = current_screen
@@ -997,17 +1007,24 @@ def runGames( layout, agents, display, length, numGames, record, numTraining, pa
       else:
         next_state = None
 
-      # Store the transition in memory
-      memory.push(state, pacmanAction, next_state, reward)
+      if TRAINING_MODE:
+        # Calculate reward
+        reward = get_reward(g.state, initialFoodCount, foodBeforeTurn - g.state.getFood().count(), moves_taken)
+
+        # Store the transition in memory
+        memory.push(state, pacmanAction, next_state, reward)
+
+        # Perform one step of the optimization (on the target network)
+        optimize_model()
 
       # Move to the next state
       state = next_state
 
-      # Perform one step of the optimization (on the target network)
-      optimize_model()
+      moves_taken += 1
+
       if gameOver:
-          episode_durations.append(t + 1)
-          break
+        episode_durations.append(t + 1)
+        break
 
     # Update the target network, copying all weights and biases in DQN
     if i % TARGET_UPDATE == 0:
@@ -1027,6 +1044,13 @@ def runGames( layout, agents, display, length, numGames, record, numTraining, pa
       g.record = pickle.dumps(components)
       with open('replay_{}_{}'.format(pacmanTeamName, round(time.time(), 0)),'wb') as f:
         f.write(g.record)
+
+  if TRAINING_MODE:
+    # Save models
+    torch.save(policy_net.state_dict(), "policy_net")
+    torch.save(policy_net.state_dict(), "target_net")
+
+  print("Ran {0} games in {1} seconds".format(numGames, time.time() - gamesStartTime))
 
   if numGames > 1:
     scores = [game.state.data.score for game in games]
